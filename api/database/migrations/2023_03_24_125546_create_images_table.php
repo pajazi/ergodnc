@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('images', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('office_id')->index();
-            $table->string('image');
+            $table->morphs('resource');
+            $table->string('path');
             $table->timestamps();
         });
     }
