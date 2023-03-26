@@ -29,9 +29,9 @@ return new class extends Migration {
 
         Schema::create('offices_tags', function (Blueprint $table) {
             $table->foreignId('office_id')->index();
-            $table->foreignId('tag_id')->index();
+            $table->foreignId('tags_id')->index();
 
-            $table->unique(['office_id', 'tag_id']);
+            $table->unique(['office_id', 'tags_id']);
         });
     }
 
