@@ -48,14 +48,14 @@ class OfficesControllerTest extends TestCase
     /**
      * @test
      */
-    public function itFiltersByHostId(): void
+    public function itFiltersByUserId(): void
     {
         Office::factory(3)->create();
 
         $host = User::factory()->create();
         $office = Office::factory()->for($host)->create();
 
-        $response = $this->get("/api/offices?host_id={$host->id}");
+        $response = $this->get("/api/offices?user_id={$host->id}");
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
         $this->assertEquals($office->id, $response->json('data')[0]['id']);
@@ -64,7 +64,7 @@ class OfficesControllerTest extends TestCase
     /**
      * @test
      */
-    public function itFiltersByUserId(): void
+    public function itFiltersByVisitorId(): void
     {
         Office::factory(3)->create();
 
@@ -74,7 +74,7 @@ class OfficesControllerTest extends TestCase
         Reservation::factory()->for(Office::factory())->create();
         Reservation::factory()->for($office)->for($user)->create();
 
-        $response = $this->get("/api/offices?user_id={$user->id}");
+        $response = $this->get("/api/offices?visitor_id={$user->id}");
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
         $this->assertEquals($office->id, $response->json('data')[0]['id']);
@@ -162,5 +162,55 @@ class OfficesControllerTest extends TestCase
         $response = $this->get("/api/offices/{$office->id}");
         $response->assertOk();
         $this->assertEquals($office->title, $response->json('data')['title']);
+    }
+
+    /**
+     * @test
+     */
+    public function itCreatesAnOffice(): void
+    {
+        $user = User::factory()->createQuietly();
+        $tag = Tags::factory()->create();
+        $tag2 = Tags::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->postJson('/api/offices', [
+            'title' => 'Office in Arkansas',
+            'description' => 'Description',
+            'lat' => '39.74051727562952',
+            'lng' => '-8.770375324893696',
+            'address_line1' => 'Address Line 1',
+            'price_per_day' => 10_000,
+            'monthly_discount' => 5,
+            'tags' => [$tag->id, $tag2->id],
+            'INVALID' => 'WRONG'
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.title', 'Office in Arkansas')
+            ->assertJsonPath('data.approval_status', Office::APPROVAL_PENDING)
+            ->assertJsonPath('data.user.id', $user->id)
+            ->assertJsonCount(2, 'data.tags');
+
+        $this->assertDatabaseHas('offices', [
+            'title' => 'Office in Arkansas'
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function itDoesntAllowCreatingIfScopeIsNotProvided(): void
+    {
+        $user = User::factory()->createQuietly();
+
+        $token = $user->createToken('test', []);
+
+        $response = $this->postJson('/api/offices', [], [
+            'Authorization' => 'Bearer '.$token->plainTextToken
+        ]);
+
+        $response->assertStatus(403);
     }
 }
