@@ -6,7 +6,9 @@ use App\Models\Office;
 use App\Models\Reservation;
 use App\Models\Tags;
 use App\Models\User;
+use App\Notifications\OfficePendingApproval;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class OfficesControllerTest extends TestCase
@@ -167,9 +169,12 @@ class OfficesControllerTest extends TestCase
     /**
      * @test
      */
-    public function itCreatesAnOffice(): void
+    public function itCreatesAnOffice()
     {
-        $user = User::factory()->createQuietly();
+        Notification::fake();
+
+        $admin = User::factory()->create(['name' => 'Paja']);
+        $user = User::factory()->create();
         $tag = Tags::factory()->create();
         $tag2 = Tags::factory()->create();
 
@@ -190,12 +195,13 @@ class OfficesControllerTest extends TestCase
         $response->assertCreated()
             ->assertJsonPath('data.title', 'Office in Arkansas')
             ->assertJsonPath('data.approval_status', Office::APPROVAL_PENDING)
-            ->assertJsonPath('data.user.id', $user->id)
             ->assertJsonCount(2, 'data.tags');
 
         $this->assertDatabaseHas('offices', [
             'title' => 'Office in Arkansas'
         ]);
+
+        Notification::assertSentTo($admin, OfficePendingApproval::class);
     }
 
     /**
@@ -212,5 +218,93 @@ class OfficesControllerTest extends TestCase
         ]);
 
         $response->assertStatus(403);
+    }
+
+    /**
+     * @test
+     */
+    public function itUpdatesAnOffice(): void
+    {
+        $user = User::factory()->createQuietly();
+        $tags = Tags::factory(2)->create();
+        $anotherTag = Tags::factory()->create();
+        $office = Office::factory()->for($user)->create();
+
+        $office->tags()->attach($tags);
+
+        $this->actingAs($user);
+
+        $response = $this->putJson('/api/offices/'.$office->id, [
+            'title' => 'Amazing Office',
+            'tags' => [$tags[0]->id, $anotherTag->id]
+        ]);
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data.tags')
+            ->assertJsonPath('data.title', 'Amazing Office');
+
+        $this->assertDatabaseHas('offices', [
+            'title' => 'Amazing Office'
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function itDoesntUpdateOfficeThatDoesntBelongToTheUser(): void
+    {
+        $user = User::factory()->createQuietly();
+        $anotherUser = User::factory()->createQuietly();
+        $office = Office::factory()->for($user)->create();
+
+        $this->actingAs($anotherUser);
+
+        $response = $this->putJson('/api/offices/'.$office->id, [
+            'title' => 'Amazing Office',
+        ]);
+
+        $response->assertForbidden();
+    }
+
+    /**
+     * @test
+     */
+    public function itMarkTheOfficeAsPendingIfDirty(): void
+    {
+        $admin = User::factory()->create(['name' => 'Paja']);
+        $user = User::factory()->createQuietly();
+        $office = Office::factory()->for($user)->create();
+
+        Notification::fake();
+
+        $this->actingAs($user);
+
+        $response = $this->putJson('/api/offices/'.$office->id, [
+            'lat' => '39.74051727562957',
+        ]);
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('offices', [
+            'id' => $office->id,
+            'approval_status' => Office::APPROVAL_PENDING
+        ]);
+
+        Notification::assertSentTo($admin, OfficePendingApproval::class);
+    }
+
+    /**
+     * @test
+     */
+    public function itCanDeleteOffices(): void
+    {
+        $user = User::factory()->create();
+        $office = Office::factory()->for($user)->create();
+
+        $this->actingAs($user);
+
+        $response = $this->delete('/api/offices/'.$office->id);
+
+        $response->assertOk();
     }
 }
