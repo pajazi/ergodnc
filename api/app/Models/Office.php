@@ -37,6 +37,11 @@ class Office extends Model
         return $this->hasMany(Reservation::class);
     }
 
+    public function featuredImage(): BelongsTo
+    {
+        return $this->belongsTo(Image::class, 'featured_image_id');
+    }
+
     public function images(): MorphMany
     {
         return $this->morphMany(Image::class, 'resource');

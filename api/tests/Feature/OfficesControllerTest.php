@@ -50,6 +50,25 @@ class OfficesControllerTest extends TestCase
     /**
      * @test
      */
+    public function itListsAllUserOfficesHiddenAndNotApproved(): void
+    {
+        $user = User::factory()->create();
+        Office::factory(3)->for($user)->create();
+
+        Office::factory()->for($user)->create(['hidden' => true]);
+        Office::factory()->for($user)->create(['approval_status' => Office::APPROVAL_PENDING]);
+
+        $this->actingAs($user);
+
+        $response = $this->get('/api/offices?user_id='.$user->id);
+
+        $response->assertOk();
+        $response->assertJsonCount(5, 'data');
+    }
+
+    /**
+     * @test
+     */
     public function itFiltersByUserId(): void
     {
         Office::factory(3)->create();
@@ -173,7 +192,7 @@ class OfficesControllerTest extends TestCase
     {
         Notification::fake();
 
-        $admin = User::factory()->create(['name' => 'Paja']);
+        $admin = User::factory()->create(['is_admin' => true]);
         $user = User::factory()->create();
         $tag = Tags::factory()->create();
         $tag2 = Tags::factory()->create();
@@ -251,6 +270,28 @@ class OfficesControllerTest extends TestCase
     /**
      * @test
      */
+    public function itUpdatesAnFeaturedImage(): void
+    {
+        $user = User::factory()->createQuietly();
+        $office = Office::factory()->for($user)->create();
+
+        $image = $office->images()->create([
+            'path' => 'image.jpg'
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->putJson('/api/offices/'.$office->id, [
+            'featured_image_id' => $image->id
+        ]);
+
+        $response->assertOk();
+        $this->assertEquals($image->id, $response->json('data.featured_image_id'));
+    }
+
+    /**
+     * @test
+     */
     public function itDoesntUpdateOfficeThatDoesntBelongToTheUser(): void
     {
         $user = User::factory()->createQuietly();
@@ -271,7 +312,7 @@ class OfficesControllerTest extends TestCase
      */
     public function itMarkTheOfficeAsPendingIfDirty(): void
     {
-        $admin = User::factory()->create(['name' => 'Paja']);
+        $admin = User::factory()->create(['is_admin' => true]);
         $user = User::factory()->createQuietly();
         $office = Office::factory()->for($user)->create();
 

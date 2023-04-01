@@ -26,8 +26,11 @@ class OfficeController extends Controller
     public function index(): AnonymousResourceCollection
     {
         $offices = Office::query()
-            ->where('approval_status', Office::APPROVAL_APPROVED)
-            ->where('hidden', false)
+            ->when(request('user_id') && auth()->user() && request('user_id') == auth()->id(),
+                fn($builder) => $builder,
+                fn($builder) => $builder->where('approval_status', Office::APPROVAL_APPROVED)
+                    ->where('hidden', false)
+            )
             ->when(request('user_id'), fn($builder) => $builder->whereUserId(request('user_id')))
             ->when(request('visitor_id'),
                 fn(Builder $builder) => $builder->whereRelation('reservations', 'user_id', '=', request('visitor_id'))
@@ -73,7 +76,7 @@ class OfficeController extends Controller
             return $office;
         });
 
-        Notification::send(User::find(1), new OfficePendingApproval($office));
+        Notification::send(User::query()->where('is_admin', true)->get(), new OfficePendingApproval($office));
 
         return OfficeResource::make($office);
     }
@@ -132,7 +135,7 @@ class OfficeController extends Controller
         });
 
         if ($requiresReview) {
-            Notification::send(User::find(1), new OfficePendingApproval($office));
+            Notification::send(User::query()->where('is_admin', true)->get(), new OfficePendingApproval($office));
         }
 
         return OfficeResource::make(
