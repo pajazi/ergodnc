@@ -25,7 +25,7 @@ class OfficeImageController extends Controller
 
         //Store file on disk
         //Root directory of storage disk
-        $path = request()->file('image')->storePublicly('/', ['disk' => 'public']);
+        $path = request()->file('image')->storePublicly('/');
 
         $image = $office->images()->create([
             'path' => $path
@@ -53,7 +53,7 @@ class OfficeImageController extends Controller
             throw ValidationException::withMessages(['image' => 'Cannot delete the featured image.']);
         }
 
-        Storage::disk('public')->delete($image->path);
+        Storage::delete($image->path);
         $image->delete();
     }
 }

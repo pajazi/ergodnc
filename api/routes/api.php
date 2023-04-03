@@ -3,6 +3,7 @@
 use App\Http\Controllers\OfficeController;
 use App\Http\Controllers\OfficeImageController;
 use App\Http\Controllers\TagsController;
+use App\Http\Controllers\UserReservationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -31,6 +32,14 @@ Route::delete('offices/{office}', [OfficeController::class, 'destroy'])
 
 Route::post('offices/{office}/images', [OfficeImageController::class, 'store'])
     ->middleware(['auth:sanctum', 'verified']);
-Route::delete('offices/{office}/images/{image}', [OfficeImageController::class, 'delete'])
+Route::delete('offices/{office}/images/{image:id}',
+    [OfficeImageController::class, 'delete']) // Implicit key for the Office/Image relationship
+->middleware(['auth:sanctum', 'verified']);
+
+//User Reservations...
+Route::get('/reservations', [UserReservationController::class, 'index'])
     ->middleware(['auth:sanctum', 'verified']);
+
+//Host Reservations...
+//Route::get('/host/reservations', [HostReservationController::class, 'index']);
 

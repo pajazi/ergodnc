@@ -2,17 +2,35 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ReservationResource;
 use App\Models\Reservation;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
-class ReservationController extends Controller
+class UserReservationController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        //
+        abort_if(!auth()->user()->tokenCan('reservations.show'), Response::HTTP_FORBIDDEN);
+
+        $reservations = Reservation::query()
+            ->where('user_id', auth()->id())
+            ->when(request('office_id'),
+                fn($query) => $query->where('office_id', request('office_id'))
+            )
+            ->when(request('status'),
+                fn($query) => $query->where('status', request('status'))
+            )
+            ->when(request('from_data') && request('to_date'),
+                fn($query) => $query->whereBetween('start_date', [request('from_data'), request('to_date')])
+                    ->orWhereBetween('end_date', [request('from_data'), request('to_date')]))
+            ->with(['office'])
+            ->paginate(20);
+
+        return ReservationResource::collection($reservations);
     }
 
     /**
