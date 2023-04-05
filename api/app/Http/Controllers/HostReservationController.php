@@ -33,10 +33,7 @@ class HostReservationController extends Controller
                 fn($query) => $query->where('status', request('status'))
             )
             ->when(request('from_data') && request('to_date'),
-                fn($query) => $query->where(function ($query) {
-                    $query->whereBetween('start_date', [request('from_data'), request('to_date')])
-                        ->orWhereBetween('end_date', [request('from_data'), request('to_date')]);
-                }))
+                fn($query) => $query->betweenDates(request('from_date'), request('to_date')))
             ->with(['office'])
             ->paginate(20);
 
