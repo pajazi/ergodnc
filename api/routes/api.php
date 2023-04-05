@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\HostReservationController;
 use App\Http\Controllers\OfficeController;
 use App\Http\Controllers\OfficeImageController;
 use App\Http\Controllers\TagsController;
@@ -41,5 +42,5 @@ Route::get('/reservations', [UserReservationController::class, 'index'])
     ->middleware(['auth:sanctum', 'verified']);
 
 //Host Reservations...
-//Route::get('/host/reservations', [HostReservationController::class, 'index']);
+Route::get('/host/reservations', [HostReservationController::class, 'index']);
 

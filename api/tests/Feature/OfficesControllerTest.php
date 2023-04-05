@@ -7,13 +7,13 @@ use App\Models\Reservation;
 use App\Models\Tags;
 use App\Models\User;
 use App\Notifications\OfficePendingApproval;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class OfficesControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     /**
      * @test
